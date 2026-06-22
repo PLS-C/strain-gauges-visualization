@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Load Cell Visualization</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+</head>
+<body>
+  <div id="js-error-banner" class="js-error-banner" hidden></div>
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Load Cell Visualization</h1>
+      <p class="page-subtitle">Full Wheatstone bridge with 4 strain gauges — force to voltage output</p>
+    </div>
+    <div class="page-header-actions">
+      <div id="site-nav" class="site-nav"></div>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/bright mode">
+        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">☀</span>
+        <span id="theme-toggle-label">Bright Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Card 1: Settings -->
+    <section class="card settings-card lc-settings-card" aria-labelledby="lc-settings-heading">
+      <div class="card-header" id="lc-settings-heading">Settings</div>
+      <div class="card-body">
+        <div id="lc-warning-banner" class="lc-warning-banner" hidden></div>
+
+        <div class="form-group">
+          <label class="form-label" for="lc-input-Vs">Supply Voltage V<sub>s</sub> (V)</label>
+          <input class="form-control" type="number" id="lc-input-Vs" value="5" min="0.1" max="24" step="0.1">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="lc-slider-F">Force F (gram)</label>
+          <div class="slider-row">
+            <input type="range" id="lc-slider-F" value="0" min="0" max="10000" step="10">
+            <input class="form-control force-number-input" type="number" id="lc-input-F-gram" value="0" min="0" max="10000" step="0.01">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="lc-input-GF">Gauge Factor GF</label>
+          <input class="form-control" type="number" id="lc-input-GF" value="2.0" min="0.1" max="200" step="0.1">
+        </div>
+
+        <input type="hidden" id="lc-input-k" value="0.001">
+
+        <div class="form-section-title">Nominal Resistance</div>
+
+        <div class="lc-resistance-grid">
+          <div class="form-group">
+            <label class="form-label" for="lc-input-R1">R<sub>1</sub> (Ω)</label>
+            <input class="form-control" type="number" id="lc-input-R1" value="100" min="0.01" step="0.01">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="lc-input-R2">R<sub>2</sub> (Ω)</label>
+            <input class="form-control" type="number" id="lc-input-R2" value="100" min="0.01" step="0.01">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="lc-input-R3">R<sub>3</sub> (Ω)</label>
+            <input class="form-control" type="number" id="lc-input-R3" value="100" min="0.01" step="0.01">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="lc-input-R4">R<sub>4</sub> (Ω)</label>
+            <input class="form-control" type="number" id="lc-input-R4" value="100" min="0.01" step="0.01">
+          </div>
+        </div>
+
+        <button type="button" class="lc-action-button" id="lc-btn-reset-r">Reset R</button>
+
+        <p class="form-hint">Note: 1 gram = 0.00981 N (1 kg = 9.81 N)</p>
+      </div>
+    </section>
+
+    <!-- Card 2: Visual Diagram -->
+    <section class="card diagram-card lc-diagram-card" aria-labelledby="lc-diagram-heading">
+      <div class="card-header" id="lc-diagram-heading">Visual Diagram</div>
+      <div class="card-body">
+        <div class="diagram-stack">
+          <div class="diagram-container diagram-container-bridge">
+            <canvas class="diagram-canvas" id="lc-bridge-canvas" aria-label="Wheatstone bridge circuit diagram"></canvas>
+          </div>
+          <div class="diagram-detail-section">
+            <h3 class="diagram-detail-title">Load Cell Beam</h3>
+            <div class="diagram-container diagram-container-beam">
+              <canvas class="diagram-canvas" id="lc-beam-canvas" aria-label="Cantilever beam load cell diagram"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 3: Equations and Results -->
+    <section class="card lc-equations-results-card" aria-labelledby="lc-equations-results-heading">
+      <div class="card-header" id="lc-equations-results-heading">Equations and Results</div>
+      <div class="card-body">
+        <div class="results-section">
+          <h3 class="section-title">Equations</h3>
+          <div class="equations-list lc-equations-list" id="lc-equations-list"></div>
+        </div>
+
+        <div class="results-section" hidden>
+          <h3 class="section-title">Results</h3>
+          <div class="results-grid" id="lc-computed-results"></div>
+        </div>
+
+        <div class="lc-vo-highlight" id="lc-vo-highlight" aria-live="polite">
+          <span class="lc-vo-label">V<sub>o</sub></span>
+          <span class="lc-vo-value" id="lc-vo-value">0.000000 V</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/site-nav.js"></script>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="js/physics-load-cell.js"></script>
+  <script src="js/ui-load-cell.js"></script>
+  <script>
+    window.addEventListener('error', function (e) {
+      var banner = document.getElementById('js-error-banner');
+      if (banner) {
+        banner.hidden = false;
+        banner.textContent = 'JavaScript error: ' + e.message + ' — open via http://localhost:8080 (not file://)';
+      }
+    });
+  </script>
+</body>
+</html>

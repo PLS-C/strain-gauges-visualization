@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Load Cell Calibration</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+</head>
+<body>
+  <div id="js-error-banner" class="js-error-banner" hidden></div>
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Load Cell Calibration</h1>
+      <p class="page-subtitle">Arduino serial input, moving average, calibration, and real-time weight</p>
+    </div>
+    <div class="page-header-actions">
+      <div id="site-nav" class="site-nav"></div>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/bright mode">
+        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">☀</span>
+        <span id="theme-toggle-label">Bright Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="lca-main-content">
+    <div class="lca-left-column">
+      <section class="card lca-card" aria-labelledby="lca-connecting-heading">
+        <div class="card-header" id="lca-connecting-heading">Connecting</div>
+        <div class="card-body">
+          <div id="lca-serial-warning" class="lca-warning-banner" hidden></div>
+
+          <div class="lca-connect-row">
+            <label class="form-label" for="lca-input-baud">Setting board rate:</label>
+            <input class="form-control lca-baud-input" type="number" id="lca-input-baud" value="9600" min="300" max="2000000" step="1">
+            <button type="button" class="lca-action-button lca-connect-btn" id="lca-btn-connect">Connect</button>
+            <button type="button" class="lca-action-button lca-connect-btn" id="lca-btn-disconnect" disabled>Disconnect</button>
+            <button type="button" class="lca-action-button lca-connect-btn" id="lca-btn-clear-graph" disabled>Clear graph</button>
+          </div>
+
+          <div class="lca-readout-section">
+            <div class="lca-readout-label">Serial read:</div>
+            <div class="lca-readout-row">
+              <div class="lca-readout-cell">
+                <span class="lca-readout-type-label">string</span>
+                <code class="lca-readout-code" id="lca-serial-raw" aria-live="polite">—</code>
+              </div>
+              <div class="lca-readout-cell">
+                <span class="lca-readout-type-label">number</span>
+                <div class="lca-readout-box" id="lca-adc-number" aria-live="polite">—</div>
+              </div>
+            </div>
+            <div class="lca-readout-label">Sensor value with moving average:</div>
+            <div class="lca-ma-control-row">
+              <div class="lca-readout-box" id="lca-adc-ma" aria-live="polite">—</div>
+              <button type="button" class="lca-action-button lca-connect-btn" id="lca-btn-stream-toggle" disabled>Pause</button>
+            </div>
+          </div>
+
+          <div class="lca-chart-container">
+            <canvas class="lca-chart-canvas" id="lca-sensor-chart" aria-label="Sensor value real-time chart"></canvas>
+          </div>
+
+          <section class="lca-graph-console is-collapsed" id="lca-sensor-console" aria-labelledby="lca-sensor-console-heading">
+            <div class="lca-graph-console-header">
+              <div class="lca-graph-console-title" id="lca-sensor-console-heading">Graph console</div>
+              <button
+                type="button"
+                class="lca-console-collapse-toggle"
+                id="lca-sensor-console-toggle"
+                aria-expanded="false"
+                aria-controls="lca-sensor-console-body"
+                aria-label="Expand graph console"
+              >
+                <span class="lca-console-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <div class="lca-console-body" id="lca-sensor-console-body">
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Series</div>
+              <div class="lca-console-checks">
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-sensor-show-raw" checked>
+                  <span class="lca-console-dot lca-console-dot-accent" aria-hidden="true"></span>
+                  Raw ADC
+                </label>
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-sensor-show-ma" checked>
+                  <span class="lca-console-dot lca-console-dot-success" aria-hidden="true"></span>
+                  Moving average
+                </label>
+              </div>
+            </div>
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Display</div>
+              <div class="lca-console-checks">
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-sensor-show-scale" checked>
+                  Scale numbers
+                </label>
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-sensor-show-grid" checked>
+                  Grid lines
+                </label>
+              </div>
+            </div>
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Axis limits</div>
+              <label class="lca-console-check">
+                <input type="checkbox" id="lca-sensor-fixed-limits">
+                Fixed limits
+              </label>
+              <div class="lca-console-limits">
+                <div class="lca-console-limit-row">
+                  <label class="lca-console-limit-label" for="lca-sensor-x-min">X min (s)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-sensor-x-min" step="any" disabled>
+                  <label class="lca-console-limit-label" for="lca-sensor-x-max">X max (s)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-sensor-x-max" step="any" disabled>
+                </div>
+                <div class="lca-console-limit-row">
+                  <label class="lca-console-limit-label" for="lca-sensor-y-min">Y min (ADC)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-sensor-y-min" step="any" disabled>
+                  <label class="lca-console-limit-label" for="lca-sensor-y-max">Y max (ADC)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-sensor-y-max" step="any" disabled>
+                </div>
+              </div>
+              <button type="button" class="lca-console-reset-btn" id="lca-sensor-reset-axes">Reset axes</button>
+            </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="card lca-card" aria-labelledby="lca-weight-heading">
+        <div class="card-header" id="lca-weight-heading">Weight (g)</div>
+        <div class="card-body">
+          <div class="lca-weight-row">
+            <span class="lca-weight-label">Weight (g):</span>
+            <div class="lca-readout-box lca-weight-readout" id="lca-weight-value" aria-live="polite">—</div>
+          </div>
+
+          <div class="lca-chart-container">
+            <canvas class="lca-chart-canvas" id="lca-weight-chart" aria-label="Weight real-time chart"></canvas>
+          </div>
+
+          <section class="lca-graph-console is-collapsed" id="lca-weight-console" aria-labelledby="lca-weight-console-heading">
+            <div class="lca-graph-console-header">
+              <div class="lca-graph-console-title" id="lca-weight-console-heading">Graph console</div>
+              <button
+                type="button"
+                class="lca-console-collapse-toggle"
+                id="lca-weight-console-toggle"
+                aria-expanded="false"
+                aria-controls="lca-weight-console-body"
+                aria-label="Expand graph console"
+              >
+                <span class="lca-console-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <div class="lca-console-body" id="lca-weight-console-body">
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Series</div>
+              <div class="lca-console-checks">
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-weight-show-trace" checked>
+                  <span class="lca-console-dot lca-console-dot-success" aria-hidden="true"></span>
+                  Weight trace
+                </label>
+              </div>
+            </div>
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Display</div>
+              <div class="lca-console-checks">
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-weight-show-scale" checked>
+                  Scale numbers
+                </label>
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-weight-show-grid" checked>
+                  Grid lines
+                </label>
+              </div>
+            </div>
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Axis limits</div>
+              <label class="lca-console-check">
+                <input type="checkbox" id="lca-weight-fixed-limits">
+                Fixed limits
+              </label>
+              <div class="lca-console-limits">
+                <div class="lca-console-limit-row">
+                  <label class="lca-console-limit-label" for="lca-weight-x-min">X min (s)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-weight-x-min" step="any" disabled>
+                  <label class="lca-console-limit-label" for="lca-weight-x-max">X max (s)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-weight-x-max" step="any" disabled>
+                </div>
+                <div class="lca-console-limit-row">
+                  <label class="lca-console-limit-label" for="lca-weight-y-min">Y min (g)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-weight-y-min" step="any" disabled>
+                  <label class="lca-console-limit-label" for="lca-weight-y-max">Y max (g)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-weight-y-max" step="any" disabled>
+                </div>
+              </div>
+              <button type="button" class="lca-console-reset-btn" id="lca-weight-reset-axes">Reset axes</button>
+            </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <div class="lca-right-column">
+      <section class="card lca-card" aria-labelledby="lca-setting-heading">
+        <div class="card-header" id="lca-setting-heading">Setting</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="lca-input-average">Number of average:</label>
+            <input class="form-control lca-average-input" type="number" id="lca-input-average" value="10" min="0" max="100" step="1" placeholder="1-100">
+          </div>
+
+          <div class="lca-cal-section">
+            <div class="lca-cal-section-title">Calibration table</div>
+            <table class="lca-cal-table" id="lca-cal-table">
+              <thead>
+                <tr>
+                  <th scope="col">N</th>
+                  <th scope="col">True weight (W, g)</th>
+                  <th scope="col">Sensor value (L, ADC level)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-w-1" value="0" step="any"></td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-l-1" value="100000" step="any"></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-w-2" value="100" step="any"></td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-l-2" value="1100000" step="any"></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-w-3" value="200" step="any"></td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-l-3" value="2100000" step="any"></td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-w-4" value="500" step="any"></td>
+                  <td><input class="form-control lca-cal-input" type="number" id="lca-cal-l-4" value="5100000" step="any"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="lca-cal-actions">
+            <button type="button" class="lca-action-button" id="lca-btn-update-cal">Update calibration data</button>
+            <button type="button" class="lca-action-button lca-cal-action-secondary" id="lca-btn-export-cal">Export calibration</button>
+            <button type="button" class="lca-action-button lca-cal-action-secondary" id="lca-btn-import-cal">Import calibration</button>
+          </div>
+          <input type="file" id="lca-input-import-cal" accept=".json,application/json" hidden>
+          <div id="lca-cal-error" class="lca-warning-banner" hidden></div>
+
+          <div class="lca-equation-block">
+            <div class="lca-equation-label">Transfer function (equation):</div>
+            <div class="lca-equation-box" id="lca-equation-transfer"></div>
+          </div>
+
+          <div class="lca-equation-block">
+            <div class="lca-equation-label">Invers transfer function:</div>
+            <div class="lca-equation-box" id="lca-equation-inverse"></div>
+          </div>
+
+          <div class="lca-chart-container lca-cal-chart-container">
+            <canvas class="lca-chart-canvas" id="lca-cal-chart" aria-label="Calibration scatter and linear fit"></canvas>
+          </div>
+
+          <section class="lca-graph-console is-collapsed" id="lca-cal-console" aria-labelledby="lca-cal-console-heading">
+            <div class="lca-graph-console-header">
+              <div class="lca-graph-console-title" id="lca-cal-console-heading">Graph console</div>
+              <button
+                type="button"
+                class="lca-console-collapse-toggle"
+                id="lca-cal-console-toggle"
+                aria-expanded="false"
+                aria-controls="lca-cal-console-body"
+                aria-label="Expand graph console"
+              >
+                <span class="lca-console-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <div class="lca-console-body" id="lca-cal-console-body">
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Series</div>
+              <div class="lca-console-checks">
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-cal-show-points" checked>
+                  <span class="lca-console-dot lca-console-dot-accent" aria-hidden="true"></span>
+                  Calibration points
+                </label>
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-cal-show-fit" checked>
+                  <span class="lca-console-dot lca-console-dot-success" aria-hidden="true"></span>
+                  Linear fit
+                </label>
+              </div>
+            </div>
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Display</div>
+              <div class="lca-console-checks">
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-cal-show-scale" checked>
+                  Scale numbers
+                </label>
+                <label class="lca-console-check">
+                  <input type="checkbox" id="lca-cal-show-grid" checked>
+                  Grid lines
+                </label>
+              </div>
+            </div>
+            <div class="lca-console-group">
+              <div class="lca-console-group-title">Axis limits</div>
+              <label class="lca-console-check">
+                <input type="checkbox" id="lca-cal-fixed-limits">
+                Fixed limits
+              </label>
+              <div class="lca-console-limits">
+                <div class="lca-console-limit-row">
+                  <label class="lca-console-limit-label" for="lca-cal-x-min">X min (g)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-cal-x-min" step="any" disabled>
+                  <label class="lca-console-limit-label" for="lca-cal-x-max">X max (g)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-cal-x-max" step="any" disabled>
+                </div>
+                <div class="lca-console-limit-row">
+                  <label class="lca-console-limit-label" for="lca-cal-y-min">Y min (ADC)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-cal-y-min" step="any" disabled>
+                  <label class="lca-console-limit-label" for="lca-cal-y-max">Y max (ADC)</label>
+                  <input class="form-control lca-console-limit-input" type="number" id="lca-cal-y-max" step="any" disabled>
+                </div>
+              </div>
+              <button type="button" class="lca-console-reset-btn" id="lca-cal-reset-axes">Reset axes</button>
+            </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/site-nav.js"></script>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="js/physics-load-cell-app.js"></script>
+  <script src="js/ui-load-cell-app.js"></script>
+  <script>
+    window.addEventListener('error', function (e) {
+      var banner = document.getElementById('js-error-banner');
+      if (banner) {
+        banner.hidden = false;
+        banner.textContent = 'JavaScript error: ' + e.message + ' — open via http://localhost:8080 (not file://)';
+      }
+    });
+  </script>
+</body>
+</html>

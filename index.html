@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strain Gauge Visualizations</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Strain Gauge Visualizations</h1>
+      <p class="page-subtitle">Interactive demonstrations of strain gauge physics</p>
+    </div>
+    <div class="page-header-actions">
+      <div id="site-nav" class="site-nav"></div>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/bright mode">
+        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">☀</span>
+        <span id="theme-toggle-label">Bright Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="landing-main">
+    <p class="landing-intro">Choose a visualization to explore strain, stress, resistance, and temperature effects.</p>
+    <div class="landing-grid">
+
+      <a class="landing-card" href="Strain and Stress.html">
+        <h2 class="landing-card-title">1. Strain and Stress (Bar)</h2>
+        <p class="landing-card-desc">Classic axial bar model with material selection, force loading, and resistance calculations with temperature compensation.</p>
+        <span class="landing-card-link">Open visualization →</span>
+      </a>
+
+      <a class="landing-card" href="Strain Gauge.html">
+        <h2 class="landing-card-title">2.Serpentine Strain Gauge</h2>
+        <p class="landing-card-desc">Serpentine metal foil gauge bonded to a steel specimen. Adjust grid geometry, force, and temperature to see deformation and resistance change.</p>
+        <span class="landing-card-link">Open visualization →</span>
+      </a>
+      
+      <a class="landing-card" href="load_cells.html">
+        <h2 class="landing-card-title">3.Load Cell (Wheatstone Bridge)</h2>
+        <p class="landing-card-desc">Four strain gauges in a full Wheatstone bridge convert applied force into a measurable output voltage in real time.</p>
+        <span class="landing-card-link">Open visualization →</span>
+      </a>
+      <a class="landing-card" href="load_cell_calibration.html">
+        <h2 class="landing-card-title">4. Load Cell Calibration</h2>
+        <p class="landing-card-desc">Connect Arduino over serial, apply moving average filtering, calibrate with linear fitting, and plot real-time weight.</p>
+        <span class="landing-card-link">Open application →</span>
+      </a>
+    </div>
+  </main>
+
+  <script src="js/site-nav.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var html = document.documentElement;
+      var toggle = document.getElementById('theme-toggle');
+      var icon = document.getElementById('theme-toggle-icon');
+      var label = document.getElementById('theme-toggle-label');
+
+      function updateLabel() {
+        var theme = html.getAttribute('data-theme') || 'dark';
+        if (theme === 'dark') {
+          icon.textContent = '☀';
+          label.textContent = 'Bright Mode';
+        } else {
+          icon.textContent = '☾';
+          label.textContent = 'Dark Mode';
+        }
+      }
+
+      var saved = localStorage.getItem('strain-gauge-theme');
+      if (saved === 'light' || saved === 'dark') {
+        html.setAttribute('data-theme', saved);
+      }
+      updateLabel();
+
+      toggle.addEventListener('click', function () {
+        var current = html.getAttribute('data-theme') || 'dark';
+        var next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('strain-gauge-theme', next);
+        updateLabel();
+      });
+    })();
+  </script>
+</body>
+</html>

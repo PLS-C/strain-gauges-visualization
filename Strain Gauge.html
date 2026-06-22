@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serpentine Strain Gauge Visualization</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+</head>
+<body>
+  <div id="js-error-banner" class="js-error-banner" hidden></div>
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Serpentine Strain Gauge</h1>
+      <p class="page-subtitle">Serpentine metal gauge bonded to a steel specimen — deformation and resistance with temperature</p>
+    </div>
+    <div class="page-header-actions">
+      <div id="site-nav" class="site-nav"></div>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/bright mode">
+        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">☀</span>
+        <span id="theme-toggle-label">Bright Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Card 1: Settings -->
+    <section class="card settings-card" aria-labelledby="settings-heading">
+      <div class="card-header" id="settings-heading">Settings</div>
+      <div class="card-body">
+
+        <h3 class="form-section-title">Loading &amp; Temperature</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-slider-F">Force (F) (N)</label>
+          <div class="slider-row">
+            <input type="range" id="sg-slider-F" value="0" step="1">
+            <input class="form-control force-number-input" type="number" id="sg-input-force" value="0" step="1">
+          </div>
+          <span class="slider-value" id="sg-force-value">0.00 N</span>
+          <span class="form-hint">F &gt; 0 = Tension (stretch) | F &lt; 0 = Compression</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-slider-T">Temperature (T) (°C)</label>
+          <div class="slider-row">
+            <input type="range" id="sg-slider-T" value="20" min="-40" max="200" step="1">
+            <input class="form-control temp-number-input" type="number" id="sg-input-T" value="20" min="-40" max="200" step="1">
+          </div>
+        </div>
+
+        <h3 class="form-section-title">Gauge Geometry</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-material-select">Gauge Material</label>
+          <select class="form-control" id="sg-material-select">
+            <option value="constantan" selected>Constantan (Cu-Ni)</option>
+            <option value="nichrome">Nichrome (Ni-Cr)</option>
+            <option value="platinum">Platinum</option>
+            <option value="semiconductor">Semiconductor (Si)</option>
+            <option value="example_constantan">Example Constantan</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-input-l-grid">Grid Length (l_grid) (mm)</label>
+          <input class="form-control" type="number" id="sg-input-l-grid" value="25" min="0.001" step="0.1">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-input-w">Grid Width (w) (mm)</label>
+          <input class="form-control" type="number" id="sg-input-w" value="0.9" min="0.001" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-input-s">Spacing (s) (mm)</label>
+          <input class="form-control" type="number" id="sg-input-s" value="0.2" min="0" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-input-n">Number of Grids (n)</label>
+          <input class="form-control" type="number" id="sg-input-n" value="10" min="1" step="1">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-input-t">Thickness (t) (μm)</label>
+          <input class="form-control" type="number" id="sg-input-t" value="5" min="0.001" step="0.1">
+        </div>
+
+        <h3 class="form-section-title">Specimen</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-input-l-specimen">Specimen Length (L_specimen) (mm)</label>
+          <input class="form-control" type="number" id="sg-input-l-specimen" value="100" min="0.001" step="1">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sg-input-a-specimen">Specimen Cross-section Area (A_specimen) (mm²)</label>
+          <input class="form-control" type="number" id="sg-input-a-specimen" value="100" min="0.001" step="1">
+        </div>
+
+
+
+        <div class="computed-readouts">
+          <div class="computed-readout">
+            <span class="computed-readout-label">L_total</span>
+            <span class="computed-readout-value" id="sg-readout-l-total">— mm</span>
+          </div>
+          <div class="computed-readout">
+            <span class="computed-readout-label">A_gauge</span>
+            <span class="computed-readout-value" id="sg-readout-a-gauge">— mm²</span>
+          </div>
+          <div class="computed-readout">
+            <span class="computed-readout-label">F_max</span>
+            <span class="computed-readout-value" id="sg-readout-f-max">— N</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 2: Visual Diagram -->
+    <section class="card diagram-card" aria-labelledby="diagram-heading">
+      <div class="card-header" id="diagram-heading">Visual Diagram</div>
+      <div class="card-body">
+        <div class="diagram-stack">
+          <div class="diagram-container diagram-container-overview">
+            <canvas class="diagram-canvas" id="sg-diagram-canvas" aria-label="Serpentine gauge on steel specimen overview"></canvas>
+          </div>
+          <div class="diagram-detail-section">
+            <h3 class="diagram-detail-title">Grid detail</h3>
+            <div class="diagram-container diagram-container-detail">
+              <canvas class="diagram-canvas" id="sg-diagram-detail-canvas" aria-label="Serpentine gauge grid detail with l, w and s dimensions"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="diagram-footer" aria-live="polite">
+          <div class="diagram-stat">
+            <span class="diagram-stat-label">L_total</span>
+            <span class="diagram-stat-value" id="sg-diagram-l-total">— mm</span>
+          </div>
+          <div class="diagram-stat">
+            <span class="diagram-stat-label">ΔL_specimen</span>
+            <span class="diagram-stat-value" id="sg-diagram-deltaL-value">— mm</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 3: Results -->
+    <section class="card results-card" aria-labelledby="results-heading">
+      <div class="card-header card-header-with-action">
+        <span id="results-heading">Equations &amp; Results</span>
+        <button
+          type="button"
+          class="card-visibility-toggle"
+          id="sg-results-visibility-toggle"
+          aria-label="Hide equations and results"
+          aria-pressed="true"
+          aria-controls="sg-results-body"
+        >
+          <span class="card-visibility-icon icon-eye" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </span>
+          <span class="card-visibility-icon icon-eye-off" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </span>
+        </button>
+      </div>
+      <div class="card-body" id="sg-results-body">
+        <div class="results-section">
+          <h3 class="section-title">Material Properties</h3>
+          <div class="properties-grid" id="sg-material-properties"></div>
+        </div>
+
+        <div class="results-section">
+          <h3 class="section-title">Specimen Properties (Steel)</h3>
+          <div class="properties-grid" id="sg-specimen-properties"></div>
+        </div>
+
+        <div class="results-section">
+          <h3 class="section-title">Computed Results</h3>
+          <div class="results-grid" id="sg-computed-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 4: Equations -->
+    <section class="card equations-card" aria-labelledby="equations-heading">
+      <div class="card-header" id="equations-heading">Equations</div>
+      <div class="card-body">
+        <div class="equations-list" id="sg-equations-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/site-nav.js"></script>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="js/physics-strain-gauge.js"></script>
+  <script src="js/ui-serpentine-gauge.js"></script>
+  <script>
+    window.addEventListener('error', function (e) {
+      var banner = document.getElementById('js-error-banner');
+      if (banner) {
+        banner.hidden = false;
+        banner.textContent = 'JavaScript error: ' + e.message + ' — open via http://localhost:8080 (not file://)';
+      }
+    });
+  </script>
+</body>
+</html>
